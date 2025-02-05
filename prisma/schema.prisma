@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  RESTAURANT_ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id             String     @id @default(cuid())
+  name           String
+  email          String     @unique
+  hashedPassword String
+  role           Role       @default(USER)
+  restaurant     Restaurant?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Restaurant {
+  id               String        @id @default(cuid())
+  name             String
+  description      String?
+  logo             String?
+  bannerImage      String?
+  slug             String        @unique
+  websiteGenerated Boolean       @default(false)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String        @unique
+  menuCategories   MenuCategory[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model MenuCategory {
+  id           String   @id @default(cuid())
+  name         String
+  order        Int      @default(0)
+  restaurantId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  restaurant Restaurant @relation("RestaurantToMenuCategory", fields: [restaurantId], references: [id])
+  menuItems  MenuItem[] @relation("MenuCategoryToMenuItem")
+
+  @@index([restaurantId])
+}
+
+model MenuItem {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  image        String?
+  order        Int      @default(0)
+  categoryId   String
+  restaurantId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  category   MenuCategory @relation("MenuCategoryToMenuItem", fields: [categoryId], references: [id])
+  restaurant Restaurant   @relation("RestaurantToMenuItem", fields: [restaurantId], references: [id])
+
+  @@index([categoryId])
+  @@index([restaurantId])
+}
+
+model Order {
+  id           String   @id @default(cuid())
+  userId       String
+  restaurantId String
+  status       String
+  total        Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user       User       @relation("UserOrders", fields: [userId], references: [id])
+  restaurant Restaurant @relation("RestaurantOrders", fields: [restaurantId], references: [id])
+
+  @@index([userId])
+  @@index([restaurantId])
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  order        Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  restaurantId String
+  menuItems    MenuItem[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([restaurantId])
+}
